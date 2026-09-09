@@ -130,16 +130,15 @@
 
             try {
                 const targetUrl = `https://libgen.li/index.php?req=${encodeURIComponent(query)}`;
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
                 
                 const response = await fetch(proxyUrl);
                 if (!response.ok) throw new Error('Ağ yanıtı başarısız.');
                 
-                const data = await response.json();
-                if (!data.contents) throw new Error('İçerik alınamadı.');
+                const htmlText = await response.text();
 
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(data.contents, 'text/html');
+                const doc = parser.parseFromString(htmlText, 'text/html');
                 
                 const rows = doc.querySelectorAll('table tr');
                 const books = [];
