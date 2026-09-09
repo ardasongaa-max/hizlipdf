@@ -11,7 +11,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <!-- Daha önce oluşturduğumuz animasyon dosyası -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-zinc-950 text-zinc-100 font-sans min-h-screen flex flex-col antialiased selection:bg-rose-500/30 selection:text-rose-200">
@@ -28,7 +27,7 @@
       </div>
       <div class="text-xs text-zinc-400 flex items-center gap-2 bg-zinc-900/80 px-3 py-1.5 rounded-full border border-zinc-800">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span>Anti-Blokaj Devrede</span>
+        <span>Matrix Fallback Aktif</span>
       </div>
     </div>
   </header>
@@ -40,7 +39,7 @@
         Sınır Tanımayan Kütüphane
       </h1>
       <p class="text-zinc-400 text-sm max-w-md mx-auto mb-8">
-        Aradığınız eseri yazın. Güçlendirilmiş proxy altyapımız engelleri aşarak sonuçları size ulaştırsın.
+        Bulunması zor eserleri yazın. Gelişmiş çoklu-ayna (multi-mirror) altyapımız engelleri aşarak sonuçları size ulaştırsın.
       </p>
 
       <div class="relative max-w-xl mx-auto group">
@@ -64,7 +63,7 @@
       </div>
     </div>
 
-    <!-- Live Status Indicator (Yeni Eklendi) -->
+    <!-- Hangi Sunucuda Arandığını Gösteren Durum Metni -->
     <div id="live-status" class="hidden text-center text-xs text-rose-400/80 mb-2 font-medium animate-pulse">
       Bağlantı kuruluyor...
     </div>
@@ -80,7 +79,6 @@
       </div>
     </div>
 
-    <!-- Results Count Badge (Yeni Eklendi) -->
     <div id="results-meta" class="hidden max-w-xl mx-auto w-full mb-3 text-xs text-zinc-400 font-medium"></div>
 
     <div id="results-container" class="space-y-3 max-w-xl mx-auto w-full"></div>
@@ -97,7 +95,7 @@
 
   <footer class="w-full border-t border-zinc-900 py-4 mt-auto">
     <div class="max-w-5xl mx-auto px-4 text-center text-xs text-zinc-500">
-      <p>© 2026 HızlıPDF — Gelişmiş Proxy Mimarisi ile Çalışır</p>
+      <p>© 2026 HızlıPDF — Gelişmiş Multi-Mirror Altyapısı ile Çalışır</p>
     </div>
   </footer>
 
@@ -114,7 +112,6 @@
       const liveStatus = document.getElementById('live-status');
       const resultsMeta = document.getElementById('results-meta');
 
-      // Arayüzü Sıfırla
       resultsContainer.innerHTML = '';
       resultsMeta.innerHTML = '';
       statusMessage.classList.add('hidden');
@@ -122,58 +119,61 @@
       skeletonLoader.classList.remove('hidden');
       liveStatus.classList.remove('hidden');
 
-      const targetUrl = `https://libgen.li/index.php?req=${encodeURIComponent(query)}`;
+      // 1. Çoklu Ayna (Mirror) Listesi: Biri çalışmazsa diğerini dener.
+      const mirrors = [
+        { name: 'LibGen.IS', url: `https://libgen.is/search.php?req=${encodeURIComponent(query)}`, type: 'is' },
+        { name: 'LibGen.LI', url: `https://libgen.li/index.php?req=${encodeURIComponent(query)}`, type: 'li' },
+        { name: 'LibGen.ST', url: `https://libgen.st/search.php?req=${encodeURIComponent(query)}`, type: 'is' }
+      ];
       
-      // Zenginleştirilmiş ve Daha Güvenilir Proxy Havuzu
+      // 2. Saf (Raw) Veri Çeken Proxy Havuzu
       const proxies = [
-        { name: 'Codetabs API', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`, type: 'text' },
-        { name: 'AllOrigins', url: `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, type: 'json' },
-        { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, type: 'text' }
+        { name: 'Codetabs', generateUrl: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
+        { name: 'AllOrigins', generateUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+        { name: 'CorsProxy', generateUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}` }
       ];
 
       let htmlData = null;
+      let successfulType = null;
 
-      const fetchWithTimeout = async (url, options = {}, timeout = 8000) => {
+      const fetchWithTimeout = async (url, timeout = 8000) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
-        try {
-          const response = await fetch(url, { ...options, signal: controller.signal });
-          clearTimeout(id);
-          return response;
-        } catch (e) {
-          clearTimeout(id);
-          throw e;
-        }
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(id);
+        return response;
       };
 
-      for (const proxy of proxies) {
-        try {
-          liveStatus.innerText = `${proxy.name} üzerinden deneniyor...`;
-          
-          const res = await fetchWithTimeout(proxy.url, {}, 8000);
-          if (!res.ok) continue;
+      // 3. Matrix Döngüsü: Aynalar ve Proxyler sırayla çarpıştırılır.
+      searchLoop: 
+      for (const mirror of mirrors) {
+        for (const proxy of proxies) {
+          try {
+            liveStatus.innerText = `${mirror.name} sunucusu ${proxy.name} üzerinden deneniyor...`;
+            
+            const proxyUrl = proxy.generateUrl(mirror.url);
+            const res = await fetchWithTimeout(proxyUrl, 8000);
+            
+            if (!res.ok) continue;
 
-          let dataStr = "";
-          if (proxy.type === 'json') {
-            const json = await res.json();
-            dataStr = json.contents;
-          } else {
-            dataStr = await res.text();
-          }
+            const dataStr = await res.text();
 
-          // Anti-Cloudflare Koruması: Gelen veri Cloudflare captcha ekranıysa bu proxy'i atla
-          if (dataStr && (dataStr.includes('Cloudflare') || dataStr.includes('Just a moment...') || dataStr.includes('Attention Required!'))) {
-            console.warn(`${proxy.name} Cloudflare engeline takıldı. Atlanıyor...`);
-            continue;
-          }
+            // Cloudflare Engel Kontrolü
+            if (dataStr && (dataStr.includes('Cloudflare') || dataStr.includes('Just a moment...') || dataStr.includes('Attention Required!'))) {
+              console.warn(`[ENGEL] ${proxy.name} -> ${mirror.name} Cloudflare'e takıldı.`);
+              continue;
+            }
 
-          if (dataStr && dataStr.length > 500) {
-            htmlData = dataStr;
-            liveStatus.innerText = "Veri çözümleniyor...";
-            break; 
+            // Başarılı bir HTML yanıtı aldıysak döngüyü kır
+            if (dataStr && dataStr.length > 2000) {
+              htmlData = dataStr;
+              successfulType = mirror.type;
+              liveStatus.innerText = "Veriler ayrıştırılıyor...";
+              break searchLoop; 
+            }
+          } catch (e) {
+            console.warn(`[HATA] ${proxy.name} -> ${mirror.name} zaman aşımına uğradı.`);
           }
-        } catch (e) {
-          console.warn(`${proxy.name} başarısız oldu.`);
         }
       }
 
@@ -181,45 +181,79 @@
       skeletonLoader.classList.add('hidden');
 
       if (!htmlData) {
-        showStatus('Bağlantı Engellendi', 'Tüm yedek sunucularımız şu an yoğun veya LibGen tarafından engellenmiş durumda. Lütfen 1-2 dakika sonra tekrar deneyin.', 'shield-alert');
+        showStatus('Tamamen Engellendi', 'Tüm ayna sunucularımız şu an yoğun. Lütfen 1-2 dakika bekleyip tekrar deneyin.', 'shield-alert');
         return;
       }
 
       try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlData, 'text/html');
-        const rows = doc.querySelectorAll('table.table tr');
         const books = [];
 
-        rows.forEach((row, index) => {
-          if (index === 0) return;
-          const cols = row.querySelectorAll('td');
-          if (cols.length >= 9) {
-            const title = cols[0]?.textContent?.trim() || 'İsimsiz Eser';
-            const author = cols[1]?.textContent?.trim() || 'Bilinmeyen Yazar';
-            const year = cols[3]?.textContent?.trim() || '-';
-            const format = cols[7]?.textContent?.trim().toUpperCase() || 'PDF';
-            const size = cols[8]?.textContent?.trim() || '-';
-            
-            const downloadAnchor = cols[9]?.querySelector('a') || cols[0]?.querySelector('a');
-            let downloadLink = downloadAnchor ? downloadAnchor.getAttribute('href') : null;
+        // 4. Hangi sunucu çalıştıysa ona uygun ayrıştırma (Parse) yapılır
+        if (successfulType === 'li') {
+          // LibGen.LI Tablo Yapısı
+          const rows = doc.querySelectorAll('table.table tr');
+          rows.forEach((row, index) => {
+            if (index === 0) return;
+            const cols = row.querySelectorAll('td');
+            if (cols.length >= 9) {
+              const title = cols[0]?.textContent?.trim() || 'İsimsiz Eser';
+              const author = cols[1]?.textContent?.trim() || 'Bilinmeyen Yazar';
+              const year = cols[3]?.textContent?.trim() || '-';
+              const format = cols[7]?.textContent?.trim().toUpperCase() || 'PDF';
+              const size = cols[8]?.textContent?.trim() || '-';
+              
+              const downloadAnchor = cols[9]?.querySelector('a') || cols[0]?.querySelector('a');
+              let downloadLink = downloadAnchor ? downloadAnchor.getAttribute('href') : null;
+              if (downloadLink && !downloadLink.startsWith('http')) {
+                downloadLink = `https://libgen.li/${downloadLink}`;
+              }
 
-            if (downloadLink && !downloadLink.startsWith('http')) {
-              downloadLink = `https://libgen.li/${downloadLink}`;
+              if (title && downloadLink) books.push({ title, author, year, format, size, downloadLink });
             }
+          });
+        } else if (successfulType === 'is') {
+          // LibGen.IS ve LibGen.ST Tablo Yapısı
+          const rows = doc.querySelectorAll('table.c tr');
+          rows.forEach((row, index) => {
+            if (index === 0) return; 
+            const cols = row.querySelectorAll('td');
+            if (cols.length >= 9) {
+              const author = cols[1]?.textContent?.trim() || 'Bilinmeyen Yazar';
+              
+              let title = 'İsimsiz Eser';
+              const titleLinks = cols[2]?.querySelectorAll('a');
+              if (titleLinks && titleLinks.length > 0) {
+                for (let a of titleLinks) {
+                  if (a.id && a.id.startsWith('title')) {
+                    title = a.textContent.trim();
+                    break;
+                  }
+                }
+                if (title === 'İsimsiz Eser') title = titleLinks[0].textContent.trim();
+              }
 
-            if (title && downloadLink) {
-              books.push({ title, author, year, format, size, downloadLink });
+              const year = cols[4]?.textContent?.trim() || '-';
+              const format = cols[8]?.textContent?.trim().toUpperCase() || 'PDF';
+              const size = cols[7]?.textContent?.trim() || '-';
+              
+              const downloadAnchor = cols[9]?.querySelector('a');
+              let downloadLink = downloadAnchor ? downloadAnchor.getAttribute('href') : null;
+              if (downloadLink && !downloadLink.startsWith('http')) {
+                downloadLink = `https://libgen.is/${downloadLink}`;
+              }
+
+              if (title && downloadLink) books.push({ title, author, year, format, size, downloadLink });
             }
-          }
-        });
+          });
+        }
 
         if (books.length === 0) {
           showStatus('Kayıt Bulunamadı', 'Aramanıza uygun kitap kaydı bulunamadı. Lütfen kelimeleri değiştirin.', 'search-x');
           return;
         }
 
-        // Meta bilgisi ekle (Kaç sonuç bulundu)
         resultsMeta.innerHTML = `<span class="text-rose-500 font-bold">${books.length}</span> adet sonuç bulundu.`;
         resultsMeta.classList.remove('hidden');
 
@@ -239,7 +273,7 @@
         card.style.animationDelay = `${i * 60}ms`;
 
         card.innerHTML = `
-          <div class="space-y-1 flex-1">
+          <div class="space-y-1 flex-1 overflow-hidden">
             <h2 class="font-semibold text-sm sm:text-base text-zinc-100 line-clamp-2">
               ${escapeHtml(book.title)}
             </h2>
@@ -261,7 +295,7 @@
             href="${book.downloadLink}" 
             target="_blank" 
             rel="noopener noreferrer"
-            class="download-btn w-full sm:w-auto bg-zinc-800 hover:bg-rose-600 text-zinc-200 hover:text-white font-medium px-3.5 py-2 rounded-lg border border-zinc-700 hover:border-rose-500 transition-all duration-200 flex items-center justify-center gap-1.5 text-xs shrink-0">
+            class="download-btn w-full sm:w-auto bg-zinc-800 hover:bg-rose-600 text-zinc-200 hover:text-white font-medium px-4 py-2.5 rounded-lg border border-zinc-700 hover:border-rose-500 transition-all duration-200 flex items-center justify-center gap-1.5 text-xs shrink-0">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
             <span>İndir</span>
           </a>
@@ -281,7 +315,6 @@
       lucide.createIcons();
     }
 
-    // Parantez hatasının düzeltildiği güvenli fonksiyon!
     function escapeHtml(text) {
       return text
         .replace(/&/g, "&amp;")
