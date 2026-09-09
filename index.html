@@ -1,212 +1,280 @@
 <!DOCTYPE html>
 <html lang="tr" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HızlıPDF — Kitap Arama</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HızlıPDF - Kitap Arama Motoru</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Custom Style & Animations -->
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen font-sans selection:bg-rose-500/20 selection:text-rose-200">
-    <header class="border-b border-zinc-900 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-10">
-        <div class="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div class="w-7 h-7 bg-rose-600 rounded flex items-center justify-center text-white font-bold text-sm">H</div>
-                <span class="font-semibold tracking-tight text-sm">hızlıpdf</span>
-            </div>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="text-xs text-zinc-400 hover:text-zinc-200 transition-colors">GitHub</a>
+<body class="bg-zinc-950 text-zinc-100 font-sans min-h-screen flex flex-col antialiased selection:bg-rose-500/30 selection:text-rose-200">
+
+  <!-- Header -->
+  <header class="w-full border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-md sticky top-0 z-50 transition-all duration-300">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2 cursor-pointer group" onclick="window.location.reload()">
+        <div class="bg-rose-600/10 p-2 rounded-xl border border-rose-500/20 group-hover:border-rose-500/40 transition-all duration-300">
+          <i data-lucide="book-open" class="w-5 h-5 text-rose-500 group-hover:scale-110 transition-transform"></i>
         </div>
-    </header>
+        <span class="text-lg font-bold tracking-tight text-white">
+          Hızlı<span class="text-rose-500">PDF</span>
+        </span>
+      </div>
+      <div class="text-xs text-zinc-400 flex items-center gap-2 bg-zinc-900/80 px-3 py-1.5 rounded-full border border-zinc-800">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>Sunucusuz Canlı Mod</span>
+      </div>
+    </div>
+  </header>
 
-    <main class="max-w-3xl mx-auto px-4 pt-16 pb-24">
-        <div class="text-center mb-8">
-            <h1 class="text-2xl font-semibold tracking-tight mb-2">Kitap Arama</h1>
-            <p class="text-sm text-zinc-400">Aradığınız kitabı anında bulun ve indirin.</p>
+  <!-- Main Container -->
+  <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-12 flex flex-col justify-start">
+    
+    <!-- Hero / Search Section -->
+    <div id="hero-section" class="text-center my-6 transition-all duration-500">
+      <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-3">
+        Kitap, Makale ve Doküman Arama
+      </h1>
+      <p class="text-zinc-400 text-sm max-w-md mx-auto mb-8">
+        Aradığınız eseri yazın, arka planda güvenli proxy katmanı üzerinden anında çekip indirelim.
+      </p>
+
+      <!-- Search Bar -->
+      <div class="relative max-w-xl mx-auto group">
+        <div class="relative flex items-center">
+          <i data-lucide="search" class="absolute left-4 w-5 h-5 text-zinc-500 group-focus-within:text-rose-500 transition-colors"></i>
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Kitap adı, yazar veya ISBN..." 
+            class="w-full pl-12 pr-24 py-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 text-white placeholder-zinc-500 focus:outline-none focus:border-rose-500/80 focus:ring-1 focus:ring-rose-500/50 transition-all text-sm shadow-inner"
+            onkeydown="if(event.key === 'Enter') handleSearch()"
+          />
+          <button 
+            onclick="handleSearch()" 
+            class="absolute right-1.5 bg-rose-600 hover:bg-rose-700 text-white font-medium px-4 py-2 rounded-lg transition-all active:scale-95 flex items-center gap-1.5 text-xs shadow-md shadow-rose-600/20">
+            <span>Ara</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
+      </div>
+    </div>
 
-        <form id="searchForm" class="flex gap-2 mb-12">
-            <div class="relative flex-1">
-                <i data-lucide="search" class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    placeholder="Kitap adı, yazar veya ISBN..." 
-                    class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-colors"
-                    required
-                >
-            </div>
-            <button 
-                type="submit" 
-                class="bg-rose-600 hover:bg-rose-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
-            >
-                <span>Ara</span>
-            </button>
-        </form>
-
-        <div id="resultsContainer">
-            <div id="initialState" class="text-center py-16 border border-dashed border-zinc-900 rounded-xl">
-                <i data-lucide="book-open" class="w-8 h-8 text-zinc-700 mx-auto mb-3"></i>
-                <p class="text-sm text-zinc-400">Aramaya başlamak için yukarıdaki kutucuğu kullanın.</p>
-            </div>
-
-            <div id="loadingState" class="hidden space-y-3">
-                <div class="bg-zinc-900/50 border border-zinc-900 rounded-xl p-4 animate-pulse">
-                    <div class="h-4 bg-zinc-800 rounded w-3/4 mb-2"></div>
-                    <div class="h-3 bg-zinc-800/60 rounded w-1/2"></div>
-                </div>
-                <div class="bg-zinc-900/50 border border-zinc-900 rounded-xl p-4 animate-pulse">
-                    <div class="h-4 bg-zinc-800 rounded w-2/3 mb-2"></div>
-                    <div class="h-3 bg-zinc-800/60 rounded w-1/3"></div>
-                </div>
-                <div class="bg-zinc-900/50 border border-zinc-900 rounded-xl p-4 animate-pulse">
-                    <div class="h-4 bg-zinc-800 rounded w-4/5 mb-2"></div>
-                    <div class="h-3 bg-zinc-800/60 rounded w-2/5"></div>
-                </div>
-            </div>
-
-            <div id="emptyState" class="hidden text-center py-16 border border-zinc-900 rounded-xl">
-                <i data-lucide="folder-search" class="w-8 h-8 text-zinc-700 mx-auto mb-3"></i>
-                <p class="text-sm text-zinc-300 font-medium mb-1">Sonuç bulunamadı</p>
-                <p class="text-xs text-zinc-500">Farklı anahtar kelimeler deneyebilirsiniz.</p>
-            </div>
-
-            <div id="errorState" class="hidden text-center py-16 border border-zinc-900 rounded-xl">
-                <i data-lucide="alert-circle" class="w-8 h-8 text-rose-500/80 mx-auto mb-3"></i>
-                <p class="text-sm text-zinc-300 font-medium mb-1">Bağlantı Hatası</p>
-                <p id="errorMessage" class="text-xs text-zinc-500">İstek işlenirken bir sorun oluştu.</p>
-            </div>
-
-            <div id="bookList" class="hidden space-y-3"></div>
+    <!-- Skeleton Loader -->
+    <div id="skeleton-loader" class="hidden space-y-3 max-w-xl mx-auto w-full mt-6">
+      <div class="p-4 rounded-xl border border-zinc-800/60 bg-zinc-900/40 space-y-3">
+        <div class="skeleton-box h-4 rounded-md w-3/4"></div>
+        <div class="skeleton-box h-3 rounded-md w-1/2"></div>
+        <div class="flex gap-2 pt-1">
+          <div class="skeleton-box h-5 rounded w-12"></div>
+          <div class="skeleton-box h-5 rounded w-16"></div>
         </div>
-    </main>
+      </div>
+      <div class="p-4 rounded-xl border border-zinc-800/60 bg-zinc-900/40 space-y-3">
+        <div class="skeleton-box h-4 rounded-md w-2/3"></div>
+        <div class="skeleton-box h-3 rounded-md w-1/3"></div>
+        <div class="flex gap-2 pt-1">
+          <div class="skeleton-box h-5 rounded w-12"></div>
+          <div class="skeleton-box h-5 rounded w-16"></div>
+        </div>
+      </div>
+    </div>
 
-    <script>
-        lucide.createIcons();
+    <!-- Results Container -->
+    <div id="results-container" class="space-y-3 max-w-xl mx-auto w-full mt-4"></div>
 
-        const searchForm = document.getElementById('searchForm');
-        const searchInput = document.getElementById('searchInput');
-        const initialState = document.getElementById('initialState');
-        const loadingState = document.getElementById('loadingState');
-        const emptyState = document.getElementById('emptyState');
-        const errorState = document.getElementById('errorState');
-        const errorMessage = document.getElementById('errorMessage');
-        const bookList = document.getElementById('bookList');
+    <!-- Empty State / Status -->
+    <div id="status-message" class="hidden text-center py-12 animate-fade-in">
+      <div class="inline-flex p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 mb-3" id="status-icon">
+        <i data-lucide="file-x" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-1" id="status-title">Sonuç Bulunamadı</h3>
+      <p class="text-xs text-zinc-400 max-w-xs mx-auto" id="status-desc">Farklı anahtar kelimeler deneyerek aramanızı tekrarlayın.</p>
+    </div>
 
-        function showState(state) {
-            initialState.classList.add('hidden');
-            loadingState.classList.add('hidden');
-            emptyState.classList.add('hidden');
-            errorState.classList.add('hidden');
-            bookList.classList.add('hidden');
+  </main>
 
-            if (state === 'initial') initialState.classList.remove('hidden');
-            if (state === 'loading') loadingState.classList.remove('hidden');
-            if (state === 'empty') emptyState.classList.remove('hidden');
-            if (state === 'error') errorState.classList.remove('hidden');
-            if (state === 'success') bookList.classList.remove('hidden');
+  <footer class="w-full border-t border-zinc-900 py-4 mt-auto">
+    <div class="max-w-5xl mx-auto px-4 text-center text-xs text-zinc-500">
+      <p>© 2026 HızlıPDF — GitHub Pages & Serverless Edge Architecture</p>
+    </div>
+  </footer>
+
+  <!-- Script Logic -->
+  <script>
+    lucide.createIcons();
+
+    async function handleSearch() {
+      const query = document.getElementById('searchInput').value.trim();
+      if (!query) return;
+
+      const resultsContainer = document.getElementById('results-container');
+      const skeletonLoader = document.getElementById('skeleton-loader');
+      const statusMessage = document.getElementById('status-message');
+
+      resultsContainer.innerHTML = '';
+      statusMessage.classList.add('hidden');
+      skeletonLoader.classList.remove('hidden');
+
+      const targetUrl = `https://libgen.li/index.php?req=${encodeURIComponent(query)}`;
+      
+      const proxyList = [
+        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+        (url) => `https://thingproxy.freeboard.io/fetch/${url}`
+      ];
+
+      let htmlData = null;
+
+      const fetchWithTimeout = async (url, options = {}, timeout = 7000) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+          const response = await fetch(url, { ...options, signal: controller.signal });
+          clearTimeout(id);
+          return response;
+        } catch (e) {
+          clearTimeout(id);
+          throw e;
         }
+      };
 
-        searchForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const query = searchInput.value.trim();
-            if (!query) return;
+      for (const getProxyUrl of proxyList) {
+        try {
+          const pUrl = getProxyUrl(targetUrl);
+          const res = await fetchWithTimeout(pUrl, {}, 7000);
+          if (!res.ok) continue;
 
-            showState('loading');
+          if (pUrl.includes('allorigins')) {
+            const json = await res.json();
+            htmlData = json.contents;
+          } else {
+            htmlData = await res.text();
+          }
 
-            try {
-                const targetUrl = `https://libgen.li/index.php?req=${encodeURIComponent(query)}`;
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-                
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('Ağ yanıtı başarısız (408/502).');
-                
-                const htmlText = await response.text();
+          if (htmlData && htmlData.length > 200) break;
+        } catch (e) {
+          console.warn("Proxy isteği başarısız oldu, sonraki deneniyor...");
+        }
+      }
 
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(htmlText, 'text/html');
-                
-                const rows = doc.querySelectorAll('table tr');
-                const books = [];
+      if (!htmlData) {
+        skeletonLoader.classList.add('hidden');
+        showStatus('Bağlantı Hatası', 'Proxy servisleri geçici olarak yanıt vermiyor. Lütfen tekrar deneyin.', 'wifi-off');
+        return;
+      }
 
-                for (let i = 1; i < rows.length; i++) {
-                    const cols = rows[i].querySelectorAll('td');
-                    if (cols.length >= 10) {
-                        const author = cols[1]?.textContent?.trim() || 'Bilinmiyor';
-                        const titleTag = cols[2]?.querySelector('a');
-                        const title = titleTag ? titleTag.textContent.trim() : (cols[2]?.textContent?.trim() || 'İsimsiz');
-                        
-                        let downloadLink = '#';
-                        if (titleTag && titleTag.getAttribute('href')) {
-                            let href = titleTag.getAttribute('href');
-                            if (!href.startsWith('http')) {
-                                href = 'https://libgen.li/' + href.replace(/^\/+/, '');
-                            }
-                            downloadLink = href;
-                        }
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlData, 'text/html');
+        const rows = doc.querySelectorAll('table.table tr');
+        const books = [];
 
-                        const year = cols[4]?.textContent?.trim() || '';
-                        const size = cols[7]?.textContent?.trim() || '';
-                        const extension = cols[8]?.textContent?.trim() || '';
+        rows.forEach((row, index) => {
+          if (index === 0) return;
+          const cols = row.querySelectorAll('td');
+          if (cols.length >= 9) {
+            const title = cols[0]?.textContent?.trim() || 'İsimsiz Eser';
+            const author = cols[1]?.textContent?.trim() || 'Bilinmeyen Yazar';
+            const year = cols[3]?.textContent?.trim() || '-';
+            const format = cols[7]?.textContent?.trim().toUpperCase() || 'PDF';
+            const size = cols[8]?.textContent?.trim() || '-';
+            
+            const downloadAnchor = cols[9]?.querySelector('a') || cols[0]?.querySelector('a');
+            let downloadLink = downloadAnchor ? downloadAnchor.getAttribute('href') : null;
 
-                        books.push({ author, title, year, size, extension, downloadLink });
-                    }
-                }
-
-                if (books.length === 0) {
-                    showState('empty');
-                    return;
-                }
-
-                bookList.innerHTML = books.map(book => `
-                    <div class="bg-zinc-900/40 border border-zinc-900 hover:border-zinc-800 transition-colors rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div class="space-y-1 min-w-0">
-                            <h2 class="text-sm font-medium text-zinc-100 truncate">${escapeHtml(book.title)}</h2>
-                            <p class="text-xs text-zinc-400 truncate">${escapeHtml(book.author)}</p>
-                            <div class="flex items-center gap-2 pt-1">
-                                ${book.extension ? `<span class="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] uppercase font-medium text-zinc-300">${escapeHtml(book.extension)}</span>` : ''}
-                                ${book.size ? `<span class="text-xs text-zinc-500">${escapeHtml(book.size)}</span>` : ''}
-                                ${book.year ? `<span class="text-xs text-zinc-500">${escapeHtml(book.year)}</span>` : ''}
-                            </div>
-                        </div>
-                        <a 
-                            href="${escapeHtml(book.downloadLink)}" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            class="inline-flex items-center justify-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium px-3.5 py-2 rounded-lg transition-colors shrink-0"
-                        >
-                            <span>İndir</span>
-                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                        </a>
-                    </div>
-                `).join('');
-
-                lucide.createIcons();
-                showState('success');
-
-            } catch (err) {
-                errorMessage.textContent = err.message || 'Beklenmeyen bir hata oluştu.';
-                showState('error');
+            if (downloadLink && !downloadLink.startsWith('http')) {
+              downloadLink = `https://libgen.li/${downloadLink}`;
             }
+
+            if (title && downloadLink) {
+              books.push({ title, author, year, format, size, downloadLink });
+            }
+          }
         });
 
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        skeletonLoader.classList.add('hidden');
+
+        if (books.length === 0) {
+          showStatus('Sonuç Bulunamadı', 'Aramanıza uygun kitap kaydı bulunamadı.', 'search-x');
+          return;
         }
-    </script>
+
+        renderResults(books);
+
+      } catch (error) {
+        skeletonLoader.classList.add('hidden');
+        showStatus('Veri İşleme Hatası', 'Dönen içerik ayrıştırılırken bir sorun oluştu.', 'alert-triangle');
+      }
+    }
+
+    function renderResults(books) {
+      const container = document.getElementById('results-container');
+      
+      books.forEach((book, i) => {
+        const card = document.createElement('div');
+        card.className = 'result-card p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-fade-in-up';
+        card.style.animationDelay = `${i * 60}ms`;
+
+        card.innerHTML = `
+          <div class="space-y-1 flex-1">
+            <h2 class="font-semibold text-sm sm:text-base text-zinc-100 line-clamp-2">
+              ${escapeHtml(book.title)}
+            </h2>
+            <p class="text-xs text-zinc-400 flex items-center gap-2 flex-wrap">
+              <span class="text-zinc-300">${escapeHtml(book.author)}</span>
+              <span class="w-1 h-1 rounded-full bg-zinc-700"></span>
+              <span>${escapeHtml(book.year)}</span>
+            </p>
+            <div class="flex items-center gap-1.5 pt-1">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide border border-rose-500/30 text-rose-400 bg-rose-500/10">
+                ${escapeHtml(book.format)}
+              </span>
+              <span class="text-[10px] text-zinc-400 bg-zinc-800/60 px-2 py-0.5 rounded border border-zinc-700/50">
+                ${escapeHtml(book.size)}
+              </span>
+            </div>
+          </div>
+          <a 
+            href="${book.downloadLink}" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="download-btn w-full sm:w-auto bg-zinc-800 hover:bg-rose-600 text-zinc-200 hover:text-white font-medium px-3.5 py-2 rounded-lg border border-zinc-700 hover:border-rose-500 transition-all duration-200 flex items-center justify-center gap-1.5 text-xs shrink-0">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>İndir</span>
+          </a>
+        `;
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function showStatus(title, desc, iconName) {
+      const statusMessage = document.getElementById('status-message');
+      document.getElementById('status-title').innerText = title;
+      document.getElementById('status-desc').innerText = desc;
+      document.getElementById('status-icon').innerHTML = `<i data-lucide="${iconName}" class="w-6 h-6"></i>`;
+      statusMessage.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
 </body>
 </html>
