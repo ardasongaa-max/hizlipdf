@@ -119,24 +119,26 @@
       skeletonLoader.classList.remove('hidden');
       liveStatus.classList.remove('hidden');
 
-      // 1. Çoklu Ayna (Mirror) Listesi: Biri çalışmazsa diğerini dener.
+      // 1. Çoklu Ayna (Mirror) Listesi
       const mirrors = [
         { name: 'LibGen.IS', url: `https://libgen.is/search.php?req=${encodeURIComponent(query)}`, type: 'is' },
         { name: 'LibGen.LI', url: `https://libgen.li/index.php?req=${encodeURIComponent(query)}`, type: 'li' },
         { name: 'LibGen.ST', url: `https://libgen.st/search.php?req=${encodeURIComponent(query)}`, type: 'is' }
       ];
       
-      // 2. Saf (Raw) Veri Çeken Proxy Havuzu
+      // 2. Güvenlik Duvarı Aşan JSON Tabanlı Proxy Havuzu
       const proxies = [
-        { name: 'Codetabs', generateUrl: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
-        { name: 'AllOrigins', generateUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
-        { name: 'CorsProxy', generateUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}` }
+        // JSON Wrapper (Ağ engellerini aşmak için en güvenlisi)
+        { name: 'AllOrigins', generateUrl: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, isJson: true },
+        // Alternatif Güvenli Proxyler
+        { name: 'ThingProxy', generateUrl: (url) => `https://thingproxy.freeboard.io/fetch/${url}`, isJson: false },
+        { name: 'Codetabs', generateUrl: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, isJson: false }
       ];
 
       let htmlData = null;
       let successfulType = null;
 
-      const fetchWithTimeout = async (url, timeout = 8000) => {
+      const fetchWithTimeout = async (url, timeout = 10000) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
         const response = await fetch(url, { signal: controller.signal });
@@ -144,27 +146,32 @@
         return response;
       };
 
-      // 3. Matrix Döngüsü: Aynalar ve Proxyler sırayla çarpıştırılır.
       searchLoop: 
       for (const mirror of mirrors) {
         for (const proxy of proxies) {
           try {
-            liveStatus.innerText = `${mirror.name} sunucusu ${proxy.name} üzerinden deneniyor...`;
+            liveStatus.innerText = `${mirror.name}, ${proxy.name} üzerinden deneniyor...`;
             
             const proxyUrl = proxy.generateUrl(mirror.url);
-            const res = await fetchWithTimeout(proxyUrl, 8000);
+            const res = await fetchWithTimeout(proxyUrl, 10000); // Süreyi 10 saniyeye çıkardık
             
             if (!res.ok) continue;
 
-            const dataStr = await res.text();
+            let dataStr = "";
+            
+            // Eğer proxy JSON dönüyorsa içerisindeki 'contents' kısmını al
+            if (proxy.isJson) {
+              const jsonRes = await res.json();
+              dataStr = jsonRes.contents || "";
+            } else {
+              dataStr = await res.text();
+            }
 
-            // Cloudflare Engel Kontrolü
-            if (dataStr && (dataStr.includes('Cloudflare') || dataStr.includes('Just a moment...') || dataStr.includes('Attention Required!'))) {
-              console.warn(`[ENGEL] ${proxy.name} -> ${mirror.name} Cloudflare'e takıldı.`);
+            if (dataStr && (dataStr.includes('Cloudflare') || dataStr.includes('Just a moment...'))) {
+              console.warn(`[ENGEL] ${proxy.name} -> ${mirror.name} engellendi.`);
               continue;
             }
 
-            // Başarılı bir HTML yanıtı aldıysak döngüyü kır
             if (dataStr && dataStr.length > 2000) {
               htmlData = dataStr;
               successfulType = mirror.type;
@@ -172,7 +179,7 @@
               break searchLoop; 
             }
           } catch (e) {
-            console.warn(`[HATA] ${proxy.name} -> ${mirror.name} zaman aşımına uğradı.`);
+            console.warn(`[HATA] ${proxy.name} -> ${mirror.name} başarısız oldu.`);
           }
         }
       }
@@ -181,7 +188,7 @@
       skeletonLoader.classList.add('hidden');
 
       if (!htmlData) {
-        showStatus('Tamamen Engellendi', 'Tüm ayna sunucularımız şu an yoğun. Lütfen 1-2 dakika bekleyip tekrar deneyin.', 'shield-alert');
+        showStatus('Ağ Engeli', 'Kamuya açık proxy servisleri şu an engelleniyor. Lütfen daha sonra tekrar deneyin.', 'wifi-off');
         return;
       }
 
@@ -190,9 +197,7 @@
         const doc = parser.parseFromString(htmlData, 'text/html');
         const books = [];
 
-        // 4. Hangi sunucu çalıştıysa ona uygun ayrıştırma (Parse) yapılır
         if (successfulType === 'li') {
-          // LibGen.LI Tablo Yapısı
           const rows = doc.querySelectorAll('table.table tr');
           rows.forEach((row, index) => {
             if (index === 0) return;
@@ -214,7 +219,6 @@
             }
           });
         } else if (successfulType === 'is') {
-          // LibGen.IS ve LibGen.ST Tablo Yapısı
           const rows = doc.querySelectorAll('table.c tr');
           rows.forEach((row, index) => {
             if (index === 0) return; 
@@ -250,7 +254,7 @@
         }
 
         if (books.length === 0) {
-          showStatus('Kayıt Bulunamadı', 'Aramanıza uygun kitap kaydı bulunamadı. Lütfen kelimeleri değiştirin.', 'search-x');
+          showStatus('Kayıt Bulunamadı', 'Aramanıza uygun kitap kaydı bulunamadı.', 'search-x');
           return;
         }
 
