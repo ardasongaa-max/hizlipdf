@@ -130,10 +130,10 @@
 
             try {
                 const targetUrl = `https://libgen.li/index.php?req=${encodeURIComponent(query)}`;
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
                 
                 const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('Ağ yanıtı başarısız.');
+                if (!response.ok) throw new Error('Ağ yanıtı başarısız (408/502).');
                 
                 const htmlText = await response.text();
 
